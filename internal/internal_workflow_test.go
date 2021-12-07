@@ -513,6 +513,26 @@ func (s *WorkflowUnitTest) Test_ContinueAsNewWorkflow() {
 	s.EqualValues("default-test-taskqueue", resultErr.TaskQueueName)
 }
 
+func (s *WorkflowUnitTest) Test_CustomIDWorkflow() {
+	workflowID := "custom-workflow-id"
+	env := s.NewTestWorkflowEnvironment()
+	env.SetStartWorkflowOptions(StartWorkflowOptions{
+		ID: workflowID,
+	})
+	env.ExecuteWorkflow(continueAsNewWorkflowTest)
+	s.True(env.IsWorkflowCompleted())
+	err := env.GetWorkflowErrorByID(workflowID)
+	s.Error(err)
+	var workflowErr *WorkflowExecutionError
+	s.True(errors.As(err, &workflowErr))
+
+	err = errors.Unwrap(workflowErr)
+	var resultErr *ContinueAsNewError
+	s.True(errors.As(err, &resultErr))
+	s.EqualValues("continueAsNewWorkflowTest", resultErr.WorkflowType.Name)
+	s.EqualValues("default-test-taskqueue", resultErr.TaskQueueName)
+}
+
 func cancelWorkflowTest(ctx Context) (string, error) {
 	if ctx.Done().Receive(ctx, nil); ctx.Err() == ErrCanceled {
 		return "Canceled.", ctx.Err()
